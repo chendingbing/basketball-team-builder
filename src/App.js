@@ -56,6 +56,18 @@ function App() {
     localStorage.setItem('playerAbilities', JSON.stringify(playerAbilities));
   }, [lineups, currentLineupId, playerAbilities]);
 
+  // 页面加载时获取所有已选球员的最新战力
+  useEffect(() => {
+    const fetchAllPlayersAbilities = async () => {
+      const allPlayers = lineups.flatMap(lineup => lineup.players.filter(p => p !== null));
+      if (allPlayers.length > 0) {
+        await fetchPlayerAbilities(allPlayers);
+      }
+    };
+    
+    fetchAllPlayersAbilities();
+  }, []); // 仅在组件挂载时执行一次
+
   const handleOpenDialog = () => {
     setSelectedPlayers(players.filter(p => p !== null));
     setDialogOpen(true);
@@ -135,28 +147,35 @@ function App() {
           Object.keys(abilitiesMap).forEach(personId => {
             newAbilities[personId] = abilitiesMap[personId];
           });
+          // 保存到 localStorage
+          localStorage.setItem('playerAbilities', JSON.stringify(newAbilities));
           return newAbilities;
         });
 
         // 更新球员信息
-        setLineups(prevLineups => prevLineups.map(lineup => 
-          lineup.id === currentLineupId 
-            ? { 
-              ...lineup, 
-              players: lineup.players.map(player => {
-                if (!player) return null;
-                const updatedPlayer = data.data.find(p => p.personId === player.personId);
-                if (updatedPlayer) {
-                  return {
-                    ...player,
-                    Ability: updatedPlayer.Ability
-                  };
-                }
-                return player;
-              })
-            }
-            : lineup
-        ));
+        setLineups(prevLineups => {
+          const newLineups = prevLineups.map(lineup => 
+            lineup.id === currentLineupId 
+              ? { 
+                ...lineup, 
+                players: lineup.players.map(player => {
+                  if (!player) return null;
+                  const updatedPlayer = data.data.find(p => p.personId === player.personId);
+                  if (updatedPlayer) {
+                    return {
+                      ...player,
+                      Ability: updatedPlayer.Ability
+                    };
+                  }
+                  return player;
+                })
+              }
+              : lineup
+          );
+          // 保存到 localStorage
+          localStorage.setItem('lineups', JSON.stringify(newLineups));
+          return newLineups;
+        });
       }
     } catch (error) {
       console.error('获取球员战力失败:', error);
